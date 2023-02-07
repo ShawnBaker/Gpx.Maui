@@ -35,26 +35,26 @@
 
 	<ItemGroup>
       <None Remove=".gitignore" />
-	  <None Remove="gpx.png" />
-	  <None Remove="LICENSE" />
-	  <None Remove="README.md" />
+      <None Remove="gpx.png" />
+      <None Remove="LICENSE" />
+      <None Remove="README.md" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Content Include="gpx.png">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="LICENSE">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="README.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </Content>
 	</ItemGroup>
 

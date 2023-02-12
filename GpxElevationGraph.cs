@@ -20,10 +20,28 @@ namespace FrozenNorth.Gpx.Maui
 			: base()
 		{
 			Drawable = drawable;
+			BackgroundColor = Colors.Gray;
+			HeightRequest = 60;
 		}
 
 		/// <summary>
-		/// Space between the outer edge of the drawable and the graph itself.
+		/// Color of the background.
+		/// </summary>
+		public new Color BackgroundColor
+		{
+			get => drawable.BackgroundColor;
+			set
+			{
+				if (value != drawable.BackgroundColor)
+				{
+					drawable.BackgroundColor = value;
+					Invalidate();
+				}
+			}
+		}
+
+		/// <summary>
+		/// Space between the outer edge of the background and the graph itself.
 		/// </summary>
 		public int Padding
 		{
@@ -169,14 +187,14 @@ namespace FrozenNorth.Gpx.Maui
 		/// <summary>
 		/// Gets/sets the current time (i.e where the bar will be drawn).
 		/// </summary>
-		public DateTime Time
+		public DateTime Position
 		{
-			get => drawable.Time;
+			get => drawable.Position;
 			set
 			{
-				if (value != drawable.Time)
+				if (value != drawable.Position)
 				{
-					drawable.Time = value;
+					drawable.Position = value;
 					Invalidate();
 				}
 			}
@@ -190,17 +208,39 @@ namespace FrozenNorth.Gpx.Maui
 		/// <summary>
 		/// Start time of the track.
 		/// </summary>
-		public DateTime StartTime => drawable.StartTime;
+		public DateTime StartTime
+		{
+			get => drawable.StartTime;
+			set
+            {
+                if (value != drawable.StartTime)
+                {
+                    drawable.StartTime = value;
+                    Invalidate();
+                }
+            }
+        }
 
-		/// <summary>
-		/// End time of the track.
-		/// </summary>
-		public DateTime EndTime => drawable.EndTime;
+        /// <summary>
+        /// End time of the track.
+        /// </summary>
+        public DateTime EndTime
+        {
+            get => drawable.EndTime;
+            set
+            {
+                if (value != drawable.EndTime)
+                {
+                    drawable.EndTime = value;
+                    Invalidate();
+                }
+            }
+        }
 
-		/// <summary>
-		/// Tolerance to be used when reducing the number of points using the Douglas Peucker algorithm.
-		/// </summary>
-		public double ReductionTolerance
+        /// <summary>
+        /// Tolerance to be used when reducing the number of points using the Douglas Peucker algorithm.
+        /// </summary>
+        public double ReductionTolerance
 		{
 			get => drawable.ReductionTolerance;
 			set
@@ -212,6 +252,16 @@ namespace FrozenNorth.Gpx.Maui
 				}
 			}
 		}
+
+		/// <summary>
+		/// Number of points.
+		/// </summary>
+		public int NumPoints => drawable.NumPoints;
+
+		/// <summary>
+		/// Number of reduced points.
+		/// </summary>
+		public int NumReducedPoints => drawable.NumReducedPoints;
 
 		/// <summary>
 		/// Enables/disables allowing the user to move the position bar.
@@ -268,9 +318,9 @@ namespace FrozenNorth.Gpx.Maui
 				if (x > w) x = w;
 				long position = (long)(Duration.Ticks * x / w);
 				DateTime newTime = StartTime + TimeSpan.FromTicks(position);
-				if (newTime != Time)
+				if (newTime != Position)
 				{
-					Time = newTime;
+					Position = newTime;
 					PositionBarMoved?.Invoke(this, e);
 				}
 			}

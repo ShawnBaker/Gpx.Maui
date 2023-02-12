@@ -6,7 +6,9 @@ namespace FrozenNorth.Gpx.Maui
     public class GpxElevationDrawable : IDrawable
     {
         // instance variables
-        private DateTime time = DateTime.MinValue;
+        private DateTime position = DateTime.MinValue;
+        private DateTime? startTime = null;
+        private DateTime? endTime = null;
         private double reductionTolerance = 0;
         private GpxPointList originalPoints = null;
 		private GpxTrack originalTrack = null;
@@ -14,9 +16,14 @@ namespace FrozenNorth.Gpx.Maui
 		private List<GpxPointList> points = new List<GpxPointList>();
 
         /// <summary>
-        /// Space between the outer edge of the drawable and the graph itself.
+        /// Color of the background.
         /// </summary>
-        public int Padding { get; set; } = 10;
+        public Color BackgroundColor { get; set; } = Colors.Transparent;
+
+		/// <summary>
+		/// Space between the outer edge of the background and the graph itself.
+		/// </summary>
+		public int Padding { get; set; } = 10;
 
 		/// <summary>
 		/// Width of the lines in the graph.
@@ -56,22 +63,30 @@ namespace FrozenNorth.Gpx.Maui
 		/// <summary>
 		/// Duration of the points to be drawn.
 		/// </summary>
-		public TimeSpan Duration => segments.Duration;
+		public TimeSpan Duration => EndTime - StartTime;
 
 		/// <summary>
 		/// Start time of the points to be drawn.
 		/// </summary>
-		public DateTime StartTime => segments.StartTime;
+		public DateTime StartTime
+        {
+            get => (startTime != null) ? startTime.Value : segments.StartTime;
+            set => startTime = value;
+        }
 
 		/// <summary>
 		/// End time of the points to be drawn.
 		/// </summary>
-		public DateTime EndTime => segments.EndTime;
+		public DateTime EndTime
+        {
+            get => (endTime != null) ? endTime.Value : segments.EndTime;
+            set => endTime = value;
+        }
 
-        /// <summary>
-        /// Tolerance to be used when reducing the number of points using the Douglas Peucker algorithm.
-        /// </summary>
-        public double ReductionTolerance
+    /// <summary>
+    /// Tolerance to be used when reducing the number of points using the Douglas Peucker algorithm.
+    /// </summary>
+    public double ReductionTolerance
         {
             get => reductionTolerance;
 			set
@@ -85,6 +100,38 @@ namespace FrozenNorth.Gpx.Maui
 			}
         }
 
+        /// <summary>
+        /// Number of points.
+        /// </summary>
+        public int NumPoints
+        {
+            get
+            {
+                int count = 0;
+				foreach (var segment in segments)
+				{
+					count += segment.Points.Count;
+				}
+				return count;
+            }
+        }
+
+		/// <summary>
+		/// Number of reduced points.
+		/// </summary>
+		public int NumReducedPoints
+		{
+			get
+			{
+				int count = 0;
+				foreach (var list in points)
+				{
+					count += list.Count;
+				}
+				return count;
+			}
+		}
+
 		/// <summary>
 		/// Sets the points to be drawn.
 		/// </summary>
@@ -93,6 +140,8 @@ namespace FrozenNorth.Gpx.Maui
             get => originalPoints;
             set
             {
+                startTime = null;
+                endTime = null;
                 originalPoints = value;
                 originalTrack = null;
                 segments.Clear();
@@ -114,7 +163,9 @@ namespace FrozenNorth.Gpx.Maui
             get => originalTrack;
             set
             {
-				originalTrack = value;
+                startTime = null;
+                endTime = null;
+                originalTrack = value;
 				originalPoints = null;
 				segments.Clear();
                 if (originalTrack != null)
@@ -131,16 +182,16 @@ namespace FrozenNorth.Gpx.Maui
 		/// <summary>
 		/// Gets/sets the current time (i.e where the position bar will be drawn).
 		/// </summary>
-		public DateTime Time
+		public DateTime Position
         {
-            get => time;
+            get => position;
             set
             {
-                time = value;
-                if (time < StartTime)
-                    time = StartTime;
-                else if (time > EndTime)
-                    time = EndTime;
+                position = value;
+                if (position < StartTime)
+                    position = StartTime;
+                else if (position > EndTime)
+                    position = EndTime;
             }
         }
 
@@ -161,7 +212,7 @@ namespace FrozenNorth.Gpx.Maui
                     points.Add(segment.Points);
                 }
             }
-			Time = StartTime;
+			Position = StartTime;
 		}
 
 		/// <summary>
@@ -175,36 +226,47 @@ namespace FrozenNorth.Gpx.Maui
             canvas.StrokeSize = LineWidth;
             canvas.StrokeColor = LineColor;
 
-            // draw the graph
-            double w = dirtyRect.Width - Padding * 2;
+            // draw the background
+            if (BackgroundColor != Colors.Transparent)
+            {
+                canvas.SetFillPaint(new SolidPaint(BackgroundColor), dirtyRect);
+                canvas.FillRectangle(dirtyRect);
+            }
+
+			// draw the graph
+			double w = dirtyRect.Width - Padding * 2;
             double h = dirtyRect.Height - Padding * 2;
             if (HasPoints)
             {
-                foreach (var segment in points)
+                foreach (var list in points)
                 {
                     double x, y;
-                    double totalSeconds = segment.Duration.TotalSeconds;
-					double elevationRange = segment.GetElevationRange(out double low, out double high);
+					double elevationRange = list.GetElevationRange(out double low, out double high);
                     if (elevationRange <= 0) elevationRange = 0;
 					if (elevationRange < MinElevationRange)
                     {
 						low -= (MinElevationRange - elevationRange) / 2;
                         elevationRange = MinElevationRange;
 					}
-					DateTime startTime = (segment[0].Time != null) ? segment[0].Time.Value : DateTime.MinValue;
+                    DateTime startTime = StartTime;
+                    DateTime endTime = EndTime;
+                    double totalSeconds = (endTime - startTime).TotalSeconds;
 
-                    double elevation = (segment[0].Elevation != null) ? segment[0].Elevation.Value : 0;
-					y = (elevation - low) / elevationRange;
-                    PointF prev = new PointF(Padding, (float)(Padding + y * h));
-                    for (int i = 1; i < segment.Count; i++)
+                    int i = 0;
+                    for (; i < list.Count && list[i].Time < startTime; i++);
+                    if (i < list.Count - 1)
                     {
-						DateTime time = (segment[i].Time != null) ? segment[i].Time.Value : DateTime.MinValue;
-						x = (time - startTime).TotalSeconds / totalSeconds;
-						elevation = (segment[i].Elevation != null) ? segment[i].Elevation.Value : 0;
-						y = 1 - (elevation - low) / elevationRange;
-                        PointF next = new PointF((float)(Padding + x * w), (float)(Padding + y * h));
-                        canvas.DrawLine(prev, next);
-                        prev = next;
+                        x = (list[i].TimeValue - startTime).TotalSeconds / totalSeconds;
+                        y = (list[i].ElevationValue - low) / elevationRange;
+                        PointF prev = new PointF((float)(Padding + x * w), (float)(Padding + y * h));
+                        for (i++; i < list.Count && list[i].TimeValue < endTime; i++)
+                        {
+                            x = (list[i].TimeValue - startTime).TotalSeconds / totalSeconds;
+                            y = 1 - (list[i].ElevationValue - low) / elevationRange;
+                            PointF next = new PointF((float)(Padding + x * w), (float)(Padding + y * h));
+                            canvas.DrawLine(prev, next);
+                            prev = next;
+                        }
                     }
                 }
             }
@@ -218,7 +280,7 @@ namespace FrozenNorth.Gpx.Maui
             // draw the position bar
             if (ShowPositionBar)
             {
-                TimeSpan barOffset = Time - StartTime;
+                TimeSpan barOffset = Position - StartTime;
                 float ox = Padding;
                 if (HasPoints)
                 {
